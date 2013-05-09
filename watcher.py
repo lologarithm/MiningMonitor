@@ -10,7 +10,7 @@ from models import SiteStats
 
 ERROR_STR = ""
 USE_CURSES = True
-UPDATE_RATE = 30
+UPDATE_RATE = 45
 
 try:
     main_window = curses.initscr()
@@ -28,19 +28,36 @@ def main():
     monitor_stats = setup_stats()
     start_time = datetime.now()
     do_it = True
+    backoff = 1
     while do_it:
         loop_time = time.time()
         clear_screen()
         print_screen(1,1,"Started At: {}".format(start_time))
         print_screen(39,1,"(Q)uit", False)
         height_offset = 4
-        for monitor in monitor_stats:
+        index = 0
+        while index < len(monitor_stats):
+            monitor = monitor_stats[index]
             assert isinstance(monitor, SiteStats)
             try:
                 stats, hashrate, workers = get_wml_stats(monitor.api_key)
             except Exception as ex:
-                do_it = False
-                ERROR_STR = ex
+                backoff_time = time.time()
+                while (time.time() - backoff_time) < backoff and do_it:
+                    print_screen(39, 10, "Error retrieving stats! Retry in: {} seconds  ".format(round(backoff-(time.time() - backoff_time), 1)))
+                    if USE_CURSES:
+                        char = main_window.getch()
+                        if char == 113:
+                            do_it = False
+                        else:
+                            time.sleep(.1)
+                    else:
+                        time.sleep(1)
+                print_screen(39, 10, " "*80)
+                backoff *= 2
+                if backoff > 60:
+                    backoff = 60
+                continue
             monitor.last_hashrate = hashrate
             monitor.total_hash_rate += hashrate
             monitor.hash_samples += 1
@@ -63,6 +80,7 @@ def main():
 
             write_stats(height_offset, monitor)
             height_offset += monitor.height + 2
+            index += 1
 
         while time.time() - loop_time < UPDATE_RATE and do_it:
             if USE_CURSES:
