@@ -2,7 +2,8 @@ import urllib2
 import json
 from datetime import datetime
 import time
-import sys, os
+import sys
+import os
 import curses
 
 from models import SiteStats
@@ -58,6 +59,8 @@ def main():
             char = main_window.getch()
             if char == 113:
                 do_it = False
+            else:
+                time.sleep(.1)
 
 
 def read_config():
