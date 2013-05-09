@@ -10,6 +10,7 @@ from models import SiteStats
 
 ERROR_STR = ""
 USE_CURSES = True
+UPDATE_RATE = 30
 
 try:
     main_window = curses.initscr()
@@ -63,12 +64,15 @@ def main():
             write_stats(height_offset, monitor)
             height_offset += monitor.height + 2
 
-        while time.time() - loop_time < 30 and do_it:
-            char = main_window.getch()
-            if char == 113:
-                do_it = False
+        while time.time() - loop_time < UPDATE_RATE and do_it:
+            if USE_CURSES:
+                char = main_window.getch()
+                if char == 113:
+                    do_it = False
+                else:
+                    time.sleep(.1)
             else:
-                time.sleep(.1)
+                time.sleep(5)
 
 
 def read_config():
@@ -80,6 +84,7 @@ def setup_stats():
     monitors = []
     for entry in config['monitors']:
         monitors.append(SiteStats(entry['name'], entry['key']))
+    UPDATE_RATE = int(config['update_rate'])
     return monitors
 
 def print_there(x, y, text):
