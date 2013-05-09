@@ -56,7 +56,7 @@ def main():
             for w in stats['workers']:
                 if w not in monitor.worker_stats:
                     monitor.worker_stats[w] = {'total_hashrate': 0.0, 'hash_samples': 0.0, 'last_hashrate': 0.0}
-                monitor.worker_stats[w]['total_hashrate'] =+ float(stats['workers'][w]['hashrate'])
+                monitor.worker_stats[w]['total_hashrate'] += float(stats['workers'][w]['hashrate'])
                 monitor.worker_stats[w]['hash_samples'] += 1
                 monitor.worker_stats[w]['last_hashrate'] = float(stats['workers'][w]['hashrate'])
 
