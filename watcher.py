@@ -11,6 +11,7 @@ from models import SiteStats
 ERROR_STR = ""
 USE_CURSES = True
 UPDATE_RATE = 45
+CONNECTION_ERR = "Connection Error. Retry in: {} seconds "
 
 try:
     main_window = curses.initscr()
@@ -24,6 +25,7 @@ except curses.error:
     # Use Print!
     USE_CURSES = False
 
+
 def main():
     monitor_stats = setup_stats()
     start_time = datetime.now()
@@ -32,19 +34,19 @@ def main():
     while do_it:
         loop_time = time.time()
         clear_screen()
-        print_screen(1,1,"Started At: {}".format(start_time))
-        print_screen(39,1,"(Q)uit", False)
+        print_screen(1, 1, "Started At: {}".format(start_time))
+        print_screen(39, 1, "(Q)uit", False)
         height_offset = 4
         index = 0
         while index < len(monitor_stats):
             monitor = monitor_stats[index]
             assert isinstance(monitor, SiteStats)
             try:
-                stats, hashrate, workers = get_wml_stats(monitor.api_key)
+                stats = fetch_stats(monitor.api_key)
             except Exception as ex:
                 backoff_time = time.time()
                 while (time.time() - backoff_time) < backoff and do_it:
-                    print_screen(39, 10, "Error retrieving stats! Retry in: {} seconds  ".format(round(backoff-(time.time() - backoff_time), 1)))
+                    print_screen(39, 10, CONNECTION_ERR.format(round(backoff-(time.time() - backoff_time), 1)))
                     if USE_CURSES:
                         char = main_window.getch()
                         if char == 113:
@@ -58,14 +60,16 @@ def main():
                 if backoff > 60:
                     backoff = 60
                 continue
-            monitor.last_hashrate = hashrate
-            monitor.total_hash_rate += hashrate
+            monitor.last_hashrate = float(stats['total_hashrate'])
+            monitor.total_hash_rate += monitor.last_hashrate
             monitor.hash_samples += 1
             monitor.stats = stats
-            monitor.height = max(7 + len(monitor.dead_workers), len(stats['workers']) - 3)
+            monitor.ltc = float(stats['confirmed_rewards'])
+            monitor.shares = int(stats['round_shares'])
+            monitor.est_ltc = float(stats['round_estimate'])
 
-            if workers:
-                for w in workers:
+            for w in stats['workers']:
+                if stats['workers'][w]['alive'] != "1":
                     monitor.dead_workers[w] = datetime.now()
             for dw in monitor.dead_workers.keys():
                 if (datetime.now() - monitor.dead_workers[dw]).total_seconds() > 300:
@@ -78,6 +82,7 @@ def main():
                 monitor.worker_stats[w]['hash_samples'] += 1
                 monitor.worker_stats[w]['last_hashrate'] = float(stats['workers'][w]['hashrate'])
 
+            monitor.height = max(7 + len(monitor.dead_workers), len(stats['workers']) - 3)
             write_stats(height_offset, monitor)
             height_offset += monitor.height + 2
             index += 1
@@ -94,7 +99,10 @@ def main():
 
 
 def read_config():
-    return json.loads(open('config.json', 'r').read())
+    try:
+        return json.loads(open('local_config.json', 'r').read())
+    except:
+        return json.loads(open('config.json', 'r').read())
 
 
 def setup_stats():
@@ -105,6 +113,7 @@ def setup_stats():
     UPDATE_RATE = int(config['update_rate'])
     return monitors
 
+
 def print_there(x, y, text):
     sys.stdout.write("\x1b7\x1b[%d;%df%s\x1b8" % (x, y, text))
     sys.stdout.flush()
@@ -112,6 +121,7 @@ def print_there(x, y, text):
 
 def write_stats(screen_offset, monitor):
     print_screen(screen_offset + 0,1, monitor.name)
+    print_screen(screen_offset + 0,len(monitor.name)+4, "Confirmed LTC: {}  Estimated LTC: {}  Round Shares: {}".format(round(monitor.ltc, 4), round(monitor.est_ltc, 4), monitor.shares))
     print_screen(screen_offset + 1,1, "*"*99)
     print_screen(screen_offset + 2,1, " Current Hashrate: {}".format(round(monitor.last_hashrate)))
     print_screen(screen_offset + 3,1, " Average Hashrate: {}".format(round(monitor.total_hash_rate / monitor.hash_samples)))
@@ -131,17 +141,6 @@ def write_stats(screen_offset, monitor):
     print_screen(screen_offset + w_ind + 6, 1, "*"*99)
     if USE_CURSES:
         main_window.refresh()
-
-
-def get_wml_stats(api_key):
-    stats = fetch_stats(api_key)
-    hashrate = 0
-    dead_workers = []
-    for worker in stats['workers']:
-        hashrate += float(stats['workers'][worker]['hashrate'])
-        if stats['workers'][worker]['alive'] != "1":
-            dead_workers.append(worker)
-    return (stats, hashrate, dead_workers)
 
 def fetch_stats(api_key):
     string_stats= urllib2.urlopen("http://www.wemineltc.com/api?api_key={}".format(api_key)).read()

@@ -4,6 +4,11 @@ __author__ = 'benjaminechols'
 class SiteStats:
     stats = None
 
+    ltc = 0.0
+    est_ltc = 0.0
+    shares = 0.0
+
+
     last_hashrate = 0.0
     total_hash_rate = 0.0
     hash_samples = 0.0
