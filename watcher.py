@@ -82,7 +82,7 @@ def main():
                 monitor.worker_stats[w]['hash_samples'] += 1
                 monitor.worker_stats[w]['last_hashrate'] = float(stats['workers'][w]['hashrate'])
 
-            monitor.height = max(7 + len(monitor.dead_workers), len(stats['workers']) + 4)
+            monitor.height = max(7 + len(monitor.dead_workers), len(stats['workers']) - 3)
             write_stats(height_offset, monitor)
             height_offset += monitor.height + 2
             index += 1
@@ -126,19 +126,19 @@ def write_stats(screen_offset, monitor):
     print_screen(screen_offset + 2,1, " Current Hashrate: {}".format(round(monitor.last_hashrate)))
     print_screen(screen_offset + 3,1, " Average Hashrate: {}".format(round(monitor.total_hash_rate / monitor.hash_samples)))
     print_screen(screen_offset + 2, 50, "Worker Name   \tLast\t(Average)")
-    w_ind = 0
+    aw_ind = 0
     for worker in monitor.worker_stats.keys():
         avg_hash = round(monitor.worker_stats[worker]['total_hashrate'] / monitor.worker_stats[worker]['hash_samples'])
-        print_screen(screen_offset + 3 + w_ind, 50,
+        print_screen(screen_offset + 3 + aw_ind, 50,
                      "{}:\t{}\t({})".format(worker, monitor.worker_stats[worker]['last_hashrate'], avg_hash))
-        w_ind += 1
+        aw_ind += 1
 
     print_screen(screen_offset + 5,1, "Dead Workers(in past five minutes)")
     w_ind = 0
     for dw in monitor.dead_workers:
         print_screen(screen_offset + w_ind + 6, 1, "  " + dw)
         w_ind += 1
-    print_screen(screen_offset + w_ind + 6, 1, "*"*99)
+    print_screen(screen_offset + max(aw_ind-3, w_ind) + 6, 1, "*"*99)
     if USE_CURSES:
         main_window.refresh()
 
