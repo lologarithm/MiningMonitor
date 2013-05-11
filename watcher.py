@@ -82,7 +82,7 @@ def main():
                 monitor.worker_stats[w]['hash_samples'] += 1
                 monitor.worker_stats[w]['last_hashrate'] = float(stats['workers'][w]['hashrate'])
 
-            monitor.height = max(7 + len(monitor.dead_workers), len(stats['workers']) - 3)
+            monitor.height = max(7 + len(monitor.dead_workers), len(stats['workers']) + 4)
             write_stats(height_offset, monitor)
             height_offset += monitor.height + 2
             index += 1
