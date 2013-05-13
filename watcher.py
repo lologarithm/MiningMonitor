@@ -11,7 +11,7 @@ from models import SiteStats
 ERROR_STR = ""
 USE_CURSES = True
 UPDATE_RATE = 45
-CONNECTION_ERR = "Connection Error. Retry in: {} seconds "
+CONNECTION_ERR = "Connection Error. (R)etry in: {} seconds "
 
 try:
     main_window = curses.initscr()
@@ -43,14 +43,17 @@ def main():
             assert isinstance(monitor, SiteStats)
             try:
                 stats = fetch_stats(monitor.api_key)
+                backoff = 1
             except Exception as ex:
                 backoff_time = time.time()
                 while (time.time() - backoff_time) < backoff and do_it:
                     print_screen(39, 10, CONNECTION_ERR.format(round(backoff-(time.time() - backoff_time), 1)))
                     if USE_CURSES:
                         char = main_window.getch()
-                        if char == 113:
+                        if char == 113 or char == 81:
                             do_it = False
+                        elif char == 114 or char == 82:
+                            break
                         else:
                             time.sleep(.1)
                     else:
