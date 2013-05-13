@@ -11,7 +11,10 @@ from models import SiteStats
 ERROR_STR = ""
 USE_CURSES = True
 UPDATE_RATE = 45
+
 CONNECTION_ERR = "Connection Error. (R)etry in: {} seconds "
+NEXT_UPDATE = "Next Update In: {} seconds or (R)etry now"
+UPDATING = "Updating Monitor: {}"
 
 try:
     main_window = curses.initscr()
@@ -35,6 +38,7 @@ def main():
         loop_time = time.time()
         clear_screen()
         print_screen(1, 1, "Started At: {}".format(start_time))
+        print_screen(38, 1, "-"*98)
         print_screen(39, 1, "(Q)uit", False)
         height_offset = 4
         index = 0
@@ -42,12 +46,13 @@ def main():
             monitor = monitor_stats[index]
             assert isinstance(monitor, SiteStats)
             try:
+                print_screen(39, 10, UPDATING.format(monitor.name))
                 stats = fetch_stats(monitor.api_key)
                 backoff = 1
             except Exception as ex:
                 backoff_time = time.time()
                 while (time.time() - backoff_time) < backoff and do_it:
-                    print_screen(39, 10, CONNECTION_ERR.format(round(backoff-(time.time() - backoff_time), 1)))
+                    print_screen(39, 10, CONNECTION_ERR.format(round(backoff-(time.time() - backoff_time))))
                     if USE_CURSES:
                         char = main_window.getch()
                         if char == 113 or char == 81:
@@ -92,11 +97,16 @@ def main():
 
         while time.time() - loop_time < UPDATE_RATE and do_it:
             if USE_CURSES:
+                print_screen(39, 10, NEXT_UPDATE.format(round(UPDATE_RATE - (time.time() - loop_time))))
                 char = main_window.getch()
-                if char == 113:
+                if char == 113 or char == 81:
                     do_it = False
+                elif char == 114 or char == 82:
+                    print_screen(39, 10, " "*80)
+                    break
                 else:
-                    time.sleep(.1)
+                    time.sleep(.35)
+                    print_screen(39, 10, " "*80)
             else:
                 time.sleep(5)
 
