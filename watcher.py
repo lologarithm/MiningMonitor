@@ -4,33 +4,43 @@ from datetime import datetime
 import time
 import sys
 import os
-import curses
-
-from models import SiteStats
+import cPickle as pickle
 
 ERROR_STR = ""
 USE_CURSES = True
 UPDATE_RATE = 45
 
+
+try:
+    import curses
+except:
+    USE_CURSES = False
+from models import SiteStats
+
+
 CONNECTION_ERR = "Connection Error. (R)etry in: {} seconds "
 NEXT_UPDATE = "Next Update In: {} seconds or (R)etry now"
 UPDATING = "Updating Monitor: {}"
-
-try:
-    main_window = curses.initscr()
-    curses.noecho()
-    curses.cbreak()
-    curses.curs_set(0)
-    curses.resizeterm(40, 100)
-    main_window.nodelay(1)
-    main_window.clear()
-except curses.error:
-    # Use Print!
-    USE_CURSES = False
+if USE_CURSES:
+    try:
+        main_window = curses.initscr()
+        curses.noecho()
+        curses.cbreak()
+        curses.curs_set(0)
+        curses.resizeterm(40, 100)
+        main_window.nodelay(1)
+        main_window.clear()
+    except curses.error:
+        # Use Print!
+        USE_CURSES = False
 
 
 def main():
-    monitor_stats = setup_stats()
+    try:
+        with open('saved_stats', 'rb') as stat_file:
+            monitor_stats = pickle.load(stat_file)
+    except:
+        monitor_stats = setup_stats()
     start_time = datetime.now()
     do_it = True
     backoff = 1
@@ -95,6 +105,8 @@ def main():
             height_offset += monitor.height + 2
             index += 1
 
+        pickle.dump( monitor_stats, open("saved_stats", "wb"))
+        
         while time.time() - loop_time < UPDATE_RATE and do_it:
             if USE_CURSES:
                 print_screen(39, 10, NEXT_UPDATE.format(round(UPDATE_RATE - (time.time() - loop_time))))
