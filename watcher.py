@@ -8,7 +8,7 @@ import cPickle as pickle
 
 ERROR_STR = ""
 USE_CURSES = True
-UPDATE_RATE = 45
+UPDATE_RATE = 60
 
 
 try:
@@ -39,8 +39,9 @@ def main():
     try:
         with open('saved_stats', 'rb') as stat_file:
             monitor_stats = pickle.load(stat_file)
+        _, UPDATE_RATE = setup_stats(False)
     except:
-        monitor_stats = setup_stats()
+        monitor_stats, UPDATE_RATE = setup_stats(True)
     start_time = datetime.now()
     do_it = True
     backoff = 1
@@ -125,18 +126,19 @@ def main():
 
 def read_config():
     try:
-        return json.loads(open('local_config.json', 'r').read())
+        return json.loads(open('local_config.json', 'rb').read())
     except:
-        return json.loads(open('config.json', 'r').read())
+        return json.loads(open('config.json', 'rb').read())
 
 
-def setup_stats():
+def setup_stats(read_monitors):
     config = read_config()
     monitors = []
-    for entry in config['monitors']:
-        monitors.append(SiteStats(entry['name'], entry['key']))
-    UPDATE_RATE = int(config['update_rate'])
-    return monitors
+    if read_monitors:
+        for entry in config['monitors']:
+            monitors.append(SiteStats(entry['name'], entry['key']))
+    update_rate = int(config['update_rate'])
+    return monitors, update_rate
 
 
 def print_there(x, y, text):
