@@ -80,8 +80,9 @@ def main():
                     backoff = 60
                 continue
             monitor.last_hashrate = float(stats['total_hashrate'])
-            monitor.total_hash_rate += monitor.last_hashrate
-            monitor.hash_samples += 1
+            time_diff = time.time() - loop_time
+            monitor.total_hash_rate += monitor.last_hashrate * time_diff
+            monitor.hash_samples += time_diff
             monitor.stats = stats
             monitor.ltc = float(stats['confirmed_rewards'])
             monitor.shares = int(stats['round_shares'])
@@ -97,8 +98,8 @@ def main():
             for w in stats['workers']:
                 if w not in monitor.worker_stats:
                     monitor.worker_stats[w] = {'total_hashrate': 0.0, 'hash_samples': 0.0, 'last_hashrate': 0.0}
-                monitor.worker_stats[w]['total_hashrate'] += float(stats['workers'][w]['hashrate'])
-                monitor.worker_stats[w]['hash_samples'] += 1
+                monitor.worker_stats[w]['total_hashrate'] += float(stats['workers'][w]['hashrate']) * time_diff
+                monitor.worker_stats[w]['hash_samples'] += time_diff
                 monitor.worker_stats[w]['last_hashrate'] = float(stats['workers'][w]['hashrate'])
 
             monitor.height = max(7 + len(monitor.dead_workers), len(stats['workers']) - 3)
